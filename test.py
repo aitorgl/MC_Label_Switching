@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Mar  7 10:38:03 2025
-
-@author: fran
-"""
-
-# test.py
 import os
 import pickle
 
@@ -14,16 +5,26 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import confusion_matrix, cohen_kappa_score, balanced_accuracy_score, f1_score, matthews_corrcoef
+from sklearn.metrics import confusion_matrix, cohen_kappa_score, balanced_accuracy_score
 
 # Imbalanced Learning Metrics
 from imblearn.metrics import geometric_mean_score, sensitivity_score
 
+# Custom Functions
 from libraries.functions import load_config, setup_logger, get_class_from_string
 from libraries.data_loading import load_datasets
 from libraries.ecoc import ECOC
 from libraries.imbalance_degree import imbalance_degree
 from libraries.functions import apply_ecoc_binarization
+
+# Machine Learning Models
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
+from lightgbm import LGBMClassifier
+# Custom Models
+from libraries.labelswitching import LSEnsemble
+
 
 # Load Configuration
 config = load_config('config.yaml')
