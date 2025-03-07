@@ -78,7 +78,7 @@ model_selection = config["simulation"]["model_selection"]
 
 # Model Configuration
 model_list = config["models"]
-model_list = [model_list[2]]  # Just LSEnsemble
+# model_list = [model_list[0], model_list[1], model_list[3], model_list[4]]  # Just LSEnsemble
 
 # Generate Model Configurations
 CV_config = generate_model_configurations(model_list)
@@ -211,8 +211,11 @@ for dataset_name, (X, y, C0) in datasets.items():
                         CM = confusion_matrix(ye_test, ye_pred, labels=unique_labels)
                         CM_accumulated[model_name][j_dic][k_conf] += CM
                                                       
-                        if len(unique_labels_test) == 1 and len(np.unique(ye_pred)) == 1:
-                            metric = 1.0 if np.array_equal(ye_test, ye_pred) else 0.0
+                        if len(unique_labels_test) == 1:
+                            if len(np.unique(ye_pred)) == 2:
+                                metric = f_sel(ye_pred, ye_test)  # Swap order to avoid warning
+                            else:
+                                metric = 1.0 if np.array_equal(ye_test, ye_pred) else 0.0  # Fallback metric
                         else:
                             metric = f_sel(ye_test, ye_pred)
 
