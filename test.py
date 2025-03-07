@@ -184,15 +184,9 @@ for dataset_name, (X, y, C0) in datasets.items():
             "std_sensitivity": np.std(sensitivity_simulations),
         }
     
-        # Get the best configuration for the model
+        # Add mc_metrics to result_data
+        result_data["multiclass_metrics"] = model_metrics  
         
-        # Combine the best configuration and the metrics into one dictionary
-        result_data = {
-            "model_name": model_name,
-            "best_config": best_model_config,  # Store the best model configuration
-            "metrics": model_metrics           # Store the computed metrics
-        }
-    
         # Print results with 5 decimals
         logger.info('')
         logger.info(f"Balanced Accuracy: {model_metrics['avg_bal_acc']:.5f} \u00B1 {model_metrics['std_bal_acc']:.5f}")
@@ -207,5 +201,6 @@ for dataset_name, (X, y, C0) in datasets.items():
         with open(file_path, 'wb') as f:
             pickle.dump(result_data, f)
             
-        logger.info(f"Metrics and configuration saved to {filename_o}")
+        logger.info(f"Multiclass metrics and configuration saved to {filename_o}")
+        logger.info('-------------------------------------------------------')
         logger.info('')

@@ -278,7 +278,7 @@ for dataset_name, (X, y, C0) in datasets.items():
         result_data = {
             "model_name": model_name,
             "best_config": best_model[model_name],
-            "metrics": {
+            "binary_metrics": {
                 "best_metric_peak": best_metric_peak[model_name],
                 "best_metric_avg": best_metric_avg[model_name],
                 "best_metric": best_metric[model_name],
@@ -302,5 +302,5 @@ for dataset_name, (X, y, C0) in datasets.items():
         with open(file_path, 'wb') as f:
             pickle.dump(result_data, f)
     
-        logger.info(f"Metrics and configuration saved to {filename_o}")
+        logger.info(f"Binary Metrics and configuration saved to {filename_o}")
         logger.info('')

@@ -1,28 +1,18 @@
-#
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
 
 from libraries.ML_models import MLPClassifierTorch, LogisticRegressionTorch
 
-
 import random
 from imblearn.over_sampling import SMOTE
-
 
 from scipy.optimize import fmin_l_bfgs_b
 from torch.optim import Optimizer
 from functools import reduce
 
-# from sklearn.metrics import log_loss
-
-# debug = False # True # 
-# if debug:
-#     import pdb
-
 eps=np.finfo(float).eps
-
-# from torch.utils.data import DataLoader, WeightedRandomSampler, SubsetRandomSampler, TensorDataset
 
 
 class LBFGSScipy(Optimizer):
@@ -202,9 +192,6 @@ def compute_weights(targets_train, RB = 1, IR = 1, mode = 'Normal'):
     return torch.from_numpy(weights) # /np.sum(weights))
 
 
-from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
-
-
 def generate_batches(nBatch, param, mode='random', seed=42):
     if seed is not None:
         np.random.seed(seed)
@@ -365,12 +352,6 @@ def train_model(x, y, model, loss_fn, optimizer, weights, num_epochs=10, batch_s
     trainloader = create_dataloader(x, y, weights, batch_size=batch_size, mode=mode)
 
     for epoch in range(num_epochs):
-        
-        """
-        if not lbfgs:
-            # Optionally add a learning rate scheduler
-            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-        """
         for batch_idx, (features, labels, batch_weights) in enumerate(trainloader):
             features = features.float()
             labels = labels.view(-1, 1)
@@ -401,11 +382,7 @@ def train_model(x, y, model, loss_fn, optimizer, weights, num_epochs=10, batch_s
             # Debug logging
             if debug and batch_idx % 10 == 0:
                 print(f"Epoch {epoch + 1}, Batch {batch_idx + 1}, Loss: {loss.item():.5f}")
-        """       
-        if not lbfgs:
-            # Step the scheduler after each epoch
-            scheduler.step()
-        """
+
     return model
 
 def weighted_mse_loss(inputs, target, weights=None):
@@ -745,8 +722,6 @@ class LSEnsemble(nn.Module):
                 ) for _ in range(self.num_experts)
             ])
             
-        
-
     def generate_experts_data(self, x, y, w=None, Q_RB_S=1, RB_each_expert=True):
         """
         Generates rebalanced and augmented datasets for experts using SMOTE, while adjusting weights and applying label switching.
@@ -1052,26 +1027,7 @@ class LSEnsemble(nn.Module):
         Q_RB_C = self.Q_RB_C
         Q_RB_S = self.Q_RB_S
         
-        # Q_tr = self.QC * self.QP_tr # Commented (Verified) 
-        
-        QR_tr_expr = 1
-        if QR_tr_expr == 1:
-            # QR_tr is the inverse of the product of Q_RB_C and Q_RB_S
-            QR_tr = QP_tr / (Q_RB_C * Q_RB_S)
-        elif QR_tr_expr == 2: # Best case
-            if (Q_RB_C == 1) and (Q_RB_S == 1):
-                QR_tr = 1*QP_tr 
-            else:
-                # QR_tr is the average of the inverses of Q_RB_C and Q_RB_S
-                QR_tr = 1*QP_tr * ((Q_RB_S + Q_RB_C) / (Q_RB_C * Q_RB_S))
-        elif QR_tr_expr == 3:
-            # QR_tr is half the average of the inverses of Q_RB_C and Q_RB_S
-            QR_tr = 0.5 * QP_tr * ((Q_RB_S + Q_RB_C) / (Q_RB_C * Q_RB_S))
-        elif QR_tr_expr == 4: # Second Place. Bacc = 0.85672
-            # QR_tr is the geometric average of the inverses of Q_RB_C and Q_RB_S
-            QR_tr = QP_tr / np.sqrt(Q_RB_C * Q_RB_S)
-        elif QR_tr_expr == 5: # Reciprocal Sum (Harmonic Mean variant)
-            QR_tr = QP_tr * np.sqrt(2 / (1/Q_RB_C + 1/Q_RB_C))
+        QR_tr = QP_tr / (Q_RB_C * Q_RB_S)
                
         # Get the averaged expert predictions (o_pred)
         o_pred = self.forward(x)
@@ -1112,94 +1068,3 @@ class LSEnsemble(nn.Module):
         for param, value in params.items():
             setattr(self, param, value)
         return self
-
-from sklearn.base import BaseEstimator
-    
-class LSEnsembleWrapper(BaseEstimator):
-    def __init__(self,  hidden_size, num_experts, alpha=0, beta=0, Q_RB_C=1, 
-                 Q_RB_S=1, n_epoch=1, n_batch=1, lbfgs=False, mode='random', 
-                 input_size=None, drop_out=0, activation_fn="tanh", output_act=1,
-                 loss_fn='MSE'):  # Added loss_fn as an argument):
-        """
-        Wrapper for the LSEnsemble model to allow use in scikit-learn-style interfaces.
-
-        Parameters:
-        - hidden_size (int): 
-            Number of neurons in the hidden layer for each expert in the ensemble.
-        - num_experts (int): 
-            Number of experts (individual models) in the ensemble.
-        - alpha (float, optional, default=0): 
-            Switching Factor: majority to minority
-        - beta (float, optional, default=0): 
-            Switching Factor: minority to majority
-        - Q_RB_C (float, optional, default=1): 
-            Classification cost
-        - Q_RB_S (float, optional, default=1): 
-            Rebalancing factor for neutral population rebalance (SMOTE)
-        - n_epoch (int, optional, default=1): 
-            Number of training epochs for the ensemble.
-        - n_batch (int, optional, default=1): 
-            Batch size used during training.
-        - lbfgs (bool, optional, default=False): 
-            Whether to use the LBFGS optimizer instead of other optimization algorithms.
-        - mode (str, optional, default='random'): 
-            Mode of sampling or initialization for the ensemble. Options may include:
-            'random', 'class_equitative', or others depending on the implementation.
-        - input_size (int, optional, default=None): 
-            Number of input features in the dataset. This must be set before initializing the model.
-        - drop_out (float, optional, default=0): 
-            Dropout probability for the hidden layer to prevent overfitting.
-        - activation_fn (str, optional, default="tanh"): 
-            Activation function for the hidden layers of the model. Common options:
-            'tanh', 'relu', or 'sigmoid'.
-        - output_act (int, optional, default=1): 
-            Type of activation function applied at the output layer. Options:
-            - 1: Customized tanh-based activation function.
-            - 2: Scaled tanh activation function.
-        - loss_fn (str, optional, default='MSE'): 
-            Loss function used for training. Common options:
-            - 'MSE': Mean Squared Error.
-            - 'KL': Kull-back Leibler Divergence
-            - 'BCE': Binary Cross Entropy for classification tasks.
-        
-        """
-        self.hidden_size = hidden_size
-        self.num_experts = num_experts
-        self.alpha = alpha
-        self.beta = beta
-        self.Q_RB_C = Q_RB_C
-        self.Q_RB_S = Q_RB_S
-        self.n_epoch = n_epoch
-        self.n_batch = n_batch
-        self.lbfgs = lbfgs
-        self.mode = mode
-        self.input_size = input_size
-        self.drop_out = drop_out
-        self.activation_fn = activation_fn
-        self.output_act = output_act
-        self.loss_fn = loss_fn
-        
-        self.model = LSEnsemble(hidden_size, num_experts, alpha, beta, Q_RB_C, 
-                                Q_RB_S, n_epoch, n_batch, lbfgs, mode, 
-                                input_size, drop_out, activation_fn, 
-                                output_act, loss_fn)
-
-    def fit(self, X, y):
-        """
-        Fit the LSEnsemble model using training data.
-        
-        Parameters:
-        - X: Training features (numpy array or torch tensor).
-        - y: Training labels (numpy array or torch tensor).
-        
-        Returns:
-        - self: The fitted model.
-        """
-        # Call the fit method of the LSEnsemble model with proper arguments
-        self.model.fit(X, y)  # Remove `self` from the arguments
-        
-        return self
-
-    def predict(self, X):
-        with torch.no_grad():
-            return self.model.predict(X) 

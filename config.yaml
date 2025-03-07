@@ -19,7 +19,7 @@ simulation:
 
 paths:
   data_folder: datasets
-  output_folder: results_test
+  output_folder: results
 
 models:
   - name: LogisticRegression
