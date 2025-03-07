@@ -1,6 +1,5 @@
 import os
 import pickle
-import logging
 
 import warnings
 from itertools import product
@@ -10,18 +9,10 @@ import pandas as pd
 
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import (
-    accuracy_score,
-    auc,
     balanced_accuracy_score,
-    classification_report,
-    cohen_kappa_score,
     confusion_matrix,
     f1_score,
     matthews_corrcoef,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-    roc_curve,
 )
 
 # Create a mapping dictionary
@@ -31,27 +22,15 @@ METRIC_FUNCTIONS = {
     "matthews_corrcoef": matthews_corrcoef,
 }
 
-# Imbalanced Learning Metrics
-from imblearn.metrics import geometric_mean_score, sensitivity_score
 
 from sklearn.model_selection import (
     KFold,
-    StratifiedKFold,
     train_test_split,
 )
 from sklearn.preprocessing import (
-    MinMaxScaler,
     StandardScaler,
 )
 
-# Machine Learning Models
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
-from lightgbm import LGBMClassifier
-
-# Custom Models
-from libraries.labelswitching import LSEnsemble
 
 # Custom Libraries
 from libraries.ecoc import ECOC

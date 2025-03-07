@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from libraries.mlpbayesian import MLPBayesSwitch
 from libraries.ML_models import MLPClassifierTorch, LogisticRegressionTorch
 
 
@@ -710,21 +709,7 @@ class LSEnsemble(nn.Module):
             self.initialize_experts(input_size)
 
     def initialize_experts(self, input_size):
-        if self.base_learner == 'Parzen':
-            self.experts = nn.ModuleList([
-                MLPBayesSwitch(
-                    n_epoch = self.n_epoch,
-                    n_batch = self.n_batch,
-                    type_batch = self.mode,
-                    layers_size=[self.hidden_size],
-                    drop_out = [0, self.drop_out],
-                    activations=[self.activation_fn.__name__, 'mod_tanh'],
-                    class_prob = [0.5, 0.5],
-                    alpha=self.alpha,
-                    beta=self.beta
-                ) for _ in range(self.num_experts)
-            ])
-        elif self.base_learner == 'AMLP':  # Use MLPClassifierTorch if lbfgs is set to 'MLP'
+        if self.base_learner == 'AMLP':  # Use MLPClassifierTorch if lbfgs is set to 'MLP'
             self.experts = nn.ModuleList([
                 MLPClassifierTorch(
                     input_dim=input_size,

@@ -17,14 +17,6 @@ from libraries.ecoc import ECOC
 from libraries.imbalance_degree import imbalance_degree
 from libraries.functions import apply_ecoc_binarization
 
-# Machine Learning Models
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
-from lightgbm import LGBMClassifier
-# Custom Models
-from libraries.labelswitching import LSEnsemble
-
 
 # Load Configuration
 config = load_config('config.yaml')
