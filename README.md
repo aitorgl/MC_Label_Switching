@@ -1,4 +1,4 @@
-# Multiclass Classification with ECOC and Label Switching Correction (LSEnsemble)
+# Multiclass Classification with ECOC and Label Switching Ensemble (LSEnsemble)
 
 This repository implements a robust multiclass classification framework using Error-Correcting Output Codes (ECOC) with a specialized focus on mitigating the impact of label switching problems. It features the LSEnsemble algorithm, designed to improve classification accuracy in the presence of label noise or ambiguity, particularly relevant in complex datasets.
 
