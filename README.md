@@ -15,7 +15,7 @@ The core of this project lies in the application of ECOC to decompose multiclass
     * Specialized algorithm for label switching correction, improving model robustness.
     * Configurable optimization parameters for LSEnsemble via `config.yaml`.
 * **Comprehensive Evaluation:**
-    * Evaluation suite using a range of metrics: balanced accuracy, Cohen's kappa, geometric mean, sensitivity, F1-score, and Matthews correlation coefficient (MCC).
+    * Evaluation suite using a range of multiclass metrics: balanced accuracy, Cohen's kappa, geometric mean, sensitivity.
     * Detailed logging and output for performance analysis.
 * **Configuration-Driven Design:**
     * `config.yaml` allows for easy customization of datasets, models, and evaluation settings.
@@ -64,11 +64,11 @@ The core of this project lies in the application of ECOC to decompose multiclass
 
 ## Datasets
 
-* Place your datasets in the `data` folder (or specify the path in `config.yaml`).
+* Place your datasets in the `datasets` folder (or specify the path in `config.yaml`).
 
 ## Output
 
-* Trained models and evaluation metrics are saved in the `output` folder.
+* Trained models and evaluation metrics are saved in the `results` folder.
 
 ## Contributing
 
@@ -76,4 +76,4 @@ The core of this project lies in the application of ECOC to decompose multiclass
 
 ## License
 
-* \[Add your license here, e.g., MIT License]
+* UC3M
