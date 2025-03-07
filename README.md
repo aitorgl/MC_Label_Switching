@@ -4,10 +4,14 @@ This repository implements a robust multiclass classification framework using Er
 
 ## Project Overview
 
-Utilizing Error-Correcting Output Codes (ECOC), this project decomposes multiclass problems into binary classification sub-problems, allowing for the effective modeling of complex decision boundaries. The LSEnsemble algorithm introduces label switching as a method to generate diverse base learners and, crucially, to rebalance the binary sub-problems. This rebalancing is designed to make the learning task easier for the base classifiers, especially in scenarios with high class imbalance. The key insight is that in the original imbalanced space, the estimation of the likelihood ratio, and consequently the underlying a posteriori probabilities, becomes challenging for base learners. By transforming the problem through label switching, LSEnsemble generates a new, more balanced representation where the likelihood ratio can be more accurately computed. This improved estimation facilitates better decision-making by the base classifiers, ultimately leading to enhanced performance in the original classification task. Furthermore, the optimal Bayes thresholds of the original binary dichotomous problems can be transformed to the rebalanced problem, as detailed in our work on class-switching ensembles:
+Error-Correcting Output Codes (ECOC) decompose multiclass problems into binary classification sub-problems, which are often highly imbalanced.
 
-Optimum Bayesian thresholds for rebalanced classification problems using class-switching ensembles,
-Pattern Recognition, 2022. https://doi.org/10.1016/j.patcog.2022.109158
+The LSEnsemble algorithm addresses this imbalance by introducing label switching to generate diverse base learners and rebalance the binary sub-problems. The rebalancing factor is chosen to simplify the learning task for the base classifiers, particularly in scenarios with significant class imbalance.
+
+The core idea is that in the original imbalanced space, accurately estimating the likelihood ratio and, consequently, the underlying a posteriori probabilities, proves challenging for base learners. By transforming the problem using label switching, which can be combined with other neutral rebalancing strategies (costs, population), LSEnsemble generates a new, more balanced representation. This transformed space allows for a more accurate computation of the transformed likelihood ratio. Furthermore, the optimal Bayes thresholds for the rebalanced problem can be determined, leading to enhanced performance in the original classification task.
+
+For a deeper understanding of the likelihood ratio and optimal Bayes threshold transformations, please refer to:
+"Optimum Bayesian thresholds for rebalanced classification problems using class-switching ensembles," Pattern Recognition, 2022. [https://doi.org/10.1016/j.patcog.2022.109158](https://doi.org/10.1016/j.patcog.2022.109158)
 
 ## Key Features
 
