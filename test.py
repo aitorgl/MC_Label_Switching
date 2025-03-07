@@ -36,7 +36,8 @@ output_path = config["paths"]["output_folder"]
 
 # Model Configuration (Assuming LSEnsemble is always model 2)
 model_list = config["models"]
-model_list = [model_list[2]] # Just LS Ensemble
+model_list = [model_list[0], model_list[1], model_list[3], model_list[4]]  # Just LSEnsemble
+# model_list = [model_list[2]] # Just LS Ensemble
 
 # Load Datasets
 dataset_special_cases = {}
@@ -201,7 +202,6 @@ for dataset_name, (X, y, C0) in datasets.items():
 
     
         # Save the combined configuration and metrics using pickle
-        filename_o = f"{dataset_name}_{ECOC_enc}_{model_name}_SW_{int(SW_optimization)}_QC_{int(QC_optimization)}_RIC_{int(RI_C_optimization)}_RIP_{int(RI_P_optimization)}_results.pkl"  # Generate filename based on dataset and model
         file_path = os.path.join(output_path, filename_o)
         
         with open(file_path, 'wb') as f:
