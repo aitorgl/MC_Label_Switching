@@ -4,7 +4,10 @@ This repository implements a robust multiclass classification framework using Er
 
 ## Project Overview
 
-The core of this project lies in the application of ECOC to decompose multiclass problems into a series of binary classification tasks. This approach enhances the model's ability to handle complex decision boundaries. Additionally, the integration of the LSEnsemble algorithm addresses label switching, a common challenge in machine learning where the meaning of class labels can be inconsistently assigned or interpreted.
+Utilizing Error-Correcting Output Codes (ECOC), this project decomposes multiclass problems into binary classification sub-problems, allowing for the effective modeling of complex decision boundaries. The LSEnsemble algorithm introduces label switching as a method to generate diverse base learners and, crucially, to rebalance the binary sub-problems. This rebalancing is designed to make the learning task easier for the base classifiers, especially in scenarios with high class imbalance. The key insight is that in the original imbalanced space, the estimation of the likelihood ratio, and consequently the underlying a posteriori probabilities, becomes challenging for base learners. By transforming the problem through label switching, LSEnsemble generates a new, more balanced representation where the likelihood ratio can be more accurately computed. This improved estimation facilitates better decision-making by the base classifiers, ultimately leading to enhanced performance in the original classification task. Furthermore, the optimal Bayes thresholds of the original binary dichotomous problems can be transformed to the rebalanced problem, as detailed in our work on class-switching ensembles:
+
+Optimum Bayesian thresholds for rebalanced classification problems using class-switching ensembles,
+Pattern Recognition, 2022. https://doi.org/10.1016/j.patcog.2022.109158
 
 ## Key Features
 
