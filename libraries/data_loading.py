@@ -28,8 +28,18 @@ def load_arff_dataset(filepath, adjust_labels=True):
     X = np.array([list(row)[:-1] for row in data])
     y = np.array([row[-1] for row in data])
 
+    # Decode byte strings to regular strings or integers
+    if isinstance(y[0], bytes):
+        y = np.array([val.decode('utf-8') for val in y])
+
     if adjust_labels:
-        y = y.astype(int) # + 1  # Convert labels to [1, nclasses]
+        try:
+            y = y.astype(int)  # Convert labels to integers
+        except ValueError:
+            # If labels are strings, you might want to map them to integers
+            unique_labels = np.unique(y)
+            label_map = {label: idx + 1 for idx, label in enumerate(unique_labels)}
+            y = np.array([label_map[label] for label in y])
 
     return X, y, -1
 
