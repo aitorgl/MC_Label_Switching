@@ -40,9 +40,7 @@ from sklearn.model_selection import (
     train_test_split,
 )
 from sklearn.preprocessing import (
-    LabelEncoder,
     MinMaxScaler,
-    OneHotEncoder,
     StandardScaler,
 )
 
@@ -53,7 +51,6 @@ from sklearn.neural_network import MLPClassifier
 from lightgbm import LGBMClassifier
 
 # Custom Models
-from libraries.mlpbayesian import MLPBayesBinW, MLPBayesSwitch
 from libraries.labelswitching import LSEnsemble
 
 # Custom Libraries
@@ -75,16 +72,6 @@ config = load_config('config.yaml')
 # -----------------------------------------------------------------------------
 # Setup Logger
 logger = setup_logger(config)
-"""
-logger = logging.getLogger(__name__)
-logging.getLogger().setLevel(logging.DEBUG)
-FORMAT = "%(asctime)-15s %(message)s"
-logging.basicConfig(
-    format=FORMAT, level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S"
-)
-mpl_logger = logging.getLogger("matplotlib")
-mpl_logger.setLevel(logging.WARNING)
-"""
 
 # Common Parameters
 verbose = config["simulation"]["verbose"]
@@ -263,7 +250,7 @@ for dataset_name, (X, y, C0) in datasets.items():
                         k_conf += 1
         
     
-    # 1. Compute best_metric_avg (average performance)
+    # Compute best_metric_avg (average performance)
     for model_item in model_list:
         model_name = model_item["name"]
         for j_dic in range(num_dichotomies):
@@ -283,7 +270,7 @@ for dataset_name, (X, y, C0) in datasets.items():
     
     best_model = dict()
     best_metric = dict()
-    # 2. Best model selection logic
+    # Best model selection logic
     for model_item in model_list:
         model_name = model_item["name"]
         best_model[model_name] = [dict() for j_dic in range(num_dichotomies)] #initialize
