@@ -4,13 +4,15 @@ This repository implements a robust multiclass classification framework using Er
 
 ## Project Overview
 
-Error-Correcting Output Codes (ECOC) decompose multiclass problems into binary classification sub-problems, which are often highly imbalanced.
+Error-Correcting Output Codes (ECOC) decompose multiclass problems into multiple binary classification sub-problems, which often suffer from severe class imbalance.
 
-The LSEnsemble algorithm addresses this imbalance by introducing label switching to generate diverse base learners and rebalance the binary sub-problems. The rebalancing factor is chosen to simplify the learning task for the base classifiers, particularly in scenarios with significant class imbalance.
+LSEnsemble addresses this issue by introducing label switching, a technique that generates diverse base learners and rebalances the binary sub-problems. The rebalancing factor is selected to simplify learning for base classifiers, particularly in highly imbalanced scenarios.
 
-The core idea is that in the original imbalanced space, accurately estimating the likelihood ratio and, consequently, the underlying a posteriori probabilities, proves challenging for base learners. By transforming the problem using label switching, which can be combined with other neutral rebalancing strategies (costs, population), LSEnsemble generates a new, more balanced representation. This transformed space allows for a more accurate computation of the transformed likelihood ratio. Furthermore, the optimal Bayes thresholds for the rebalanced problem can be determined, leading to enhanced performance in the original classification task.
+In an imbalanced space, accurately estimating the likelihood ratio and the underlying a posteriori probabilities is challenging for base learners. LSEnsemble mitigates this by transforming the problem through label switching, which can be combined with other neutral rebalancing strategies (e.g., cost-sensitive learning or population adjustments). This transformation produces a more balanced representation, improving the estimation of the transformed likelihood ratio.
 
-For a deeper understanding of the likelihood ratio and optimal Bayes threshold transformations, please refer to:
+Additionally, the optimal Bayes thresholds for the rebalanced problem can be computed, leading to improved classification performance in the original problem space.
+
+For further details on likelihood ratio estimation and Bayes threshold transformations, see:
 "Optimum Bayesian thresholds for rebalanced classification problems using class-switching ensembles," Pattern Recognition, 2022. [https://doi.org/10.1016/j.patcog.2022.109158](https://doi.org/10.1016/j.patcog.2022.109158)
 
 ## Key Features
