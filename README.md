@@ -4,11 +4,11 @@ his repository implements a multiclass classification framework using Error-Corr
 
 ## Project Overview
 
-Error-Correcting Output Codes (ECOC) decompose multiclass data into multiple binary classification problems, which frequently exhibit significant class imbalance.
+Error-Correcting Output Codes (ECOC) decompose multiclass problems into multiple binary classification tasks. Even if the original multiclass data is balanced, binarization—such as the One-Versus-All (OVA) strategy—can introduce severe class imbalance. This imbalance complicates learning, particularly in Bayes-optimal classification, where accurate likelihood ratio estimation is crucial.
 
-Error-Correcting Output Codes (ECOC) transform multiclass problems into multiple binary classification tasks. Even when the original multiclass data is balanced, binarization, particularly using a One-Versus-All (OVA) strategy, can introduce significant class imbalance. This imbalance creates challenges for standard machine learning algorithms, especially in optimal Bayes approximations, where accurate estimation of the likelihood ratio and subsequent threshold application are critical.
+The Label Switching Ensemble (LSEnsemble) offers an alternative approach to handle imbalanced classification. It randomly swaps labels based on predefined switching rates, introducing diversity within the ensemble, which enhances performance. Additionally, label switching rebalances class distributions, improving the estimation of transformed a priori probabilities and, consequently, the likelihood ratio for base learners.
 
-The Label Switching Ensemble (LSEnsemble) provides an alternative approach to address this issue by employing asymmetric label switching. This technique randomly swaps labels according to defined switching rates, introducing diversity within the ensemble, which positively impacts performance. Furthermore, by altering class populations, label switching effectively rebalances the original problem. This rebalancing facilitates the estimation of the (transformed) a priori probabilities and, consequently, the likelihood ratio for the base learners. Asymmetric label switching can be combined with other neutral rebalancing strategies, such as cost-sensitive learning and population-based adjustments, resulting in a transformed problem for which the optimal Bayes threshold can be theoretically computed.
+Asymmetric label switching can be combined with other neutral rebalancing strategies, such as cost-sensitive learning and population-based adjustments. This results in a transformed problem where the optimal Bayes threshold can be theoretically derived.
 
 For further details on likelihood ratio estimation and Bayes threshold transformations, see:
 "Optimum Bayesian thresholds for rebalanced classification problems using class-switching ensembles," Pattern Recognition, 2022. [https://doi.org/10.1016/j.patcog.2022.109158](https://doi.org/10.1016/j.patcog.2022.109158)
