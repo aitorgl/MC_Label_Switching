@@ -244,7 +244,7 @@ for dataset_name, (X, y, C0) in datasets.items():
                 CM_avg = CM_accumulated[model_name][j_dic][k_conf] / (num_folds * n_simus)
     
                 # Update best metric and model for the current configuration
-                if avg_metric_conf > best_metric_avg[model_name][j_dic]:
+                if avg_metric_conf >= best_metric_avg[model_name][j_dic]:
                     best_metric_avg[model_name][j_dic] = avg_metric_conf
                     best_model_avg[model_name][j_dic] = [cv_config, avg_metric_conf, CM_avg]
     
