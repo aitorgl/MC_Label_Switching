@@ -23,20 +23,47 @@ def load_npy_dataset(filepath_x, filepath_y, n_max, special_case=False):
     return X, y, C0
 
 def load_arff_dataset(filepath, adjust_labels=True):
-    """Loads a dataset from an .arff file."""
+    """Loads a dataset from an .arff file, handling categorical attributes."""
     data, meta = arff.loadarff(filepath)
-    X = np.array([list(row)[:-1] for row in data])
+
+    attribute_types = meta.types()[:-1]  # Exclude the class label
+    # attribute_names = meta.names()[:-1] # Exclude the class label
+
+    X = []
+    for row in data:
+        decoded_row = []
+        list_row = list(row)[:-1] #Convert to list, and slice
+        for i, val in enumerate(list_row): # Exclude the class label 
+            if attribute_types[i] == 'numeric':
+                if isinstance(val, bytes):
+                    decoded_row.append(float(val.decode('utf-8')))
+                else:
+                    decoded_row.append(float(val))
+            else:  # Categorical attribute
+                if isinstance(val, bytes):
+                    decoded_row.append(val.decode('utf-8'))
+                else:
+                    decoded_row.append(val)
+        X.append(decoded_row)
+
+    # Mapping categorical values to integers
+    for i, attr_type in enumerate(attribute_types):
+        if attr_type != 'numeric':
+            unique_vals = np.unique(np.array(X)[:, i])
+            val_map = {val: idx + 1 for idx, val in enumerate(unique_vals)}
+            for row in X:
+                row[i] = val_map[row[i]]
+
+    X = np.array(X, dtype=float)  # Convert to float after categorical mapping.
     y = np.array([row[-1] for row in data])
 
-    # Decode byte strings to regular strings or integers
     if isinstance(y[0], bytes):
         y = np.array([val.decode('utf-8') for val in y])
 
     if adjust_labels:
         try:
-            y = y.astype(int)  # Convert labels to integers
+            y = y.astype(int)
         except ValueError:
-            # If labels are strings, you might want to map them to integers
             unique_labels = np.unique(y)
             label_map = {label: idx + 1 for idx, label in enumerate(unique_labels)}
             y = np.array([label_map[label] for label in y])
