@@ -27,13 +27,12 @@ def load_arff_dataset(filepath, adjust_labels=True):
     data, meta = arff.loadarff(filepath)
 
     attribute_types = meta.types()[:-1]  # Exclude the class label
-    # attribute_names = meta.names()[:-1] # Exclude the class label
 
     X = []
     for row in data:
         decoded_row = []
-        list_row = list(row)[:-1] #Convert to list, and slice
-        for i, val in enumerate(list_row): # Exclude the class label 
+        list_row = list(row)[:-1]  # Convert to list, and slice
+        for i, val in enumerate(list_row):  # Exclude the class label
             if attribute_types[i] == 'numeric':
                 if isinstance(val, bytes):
                     decoded_row.append(float(val.decode('utf-8')))
@@ -61,12 +60,9 @@ def load_arff_dataset(filepath, adjust_labels=True):
         y = np.array([val.decode('utf-8') for val in y])
 
     if adjust_labels:
-        try:
-            y = y.astype(int)
-        except ValueError:
-            unique_labels = np.unique(y)
-            label_map = {label: idx + 1 for idx, label in enumerate(unique_labels)}
-            y = np.array([label_map[label] for label in y])
+        unique_labels = np.unique(y)
+        label_map = {label: idx + 1 for idx, label in enumerate(unique_labels)}
+        y = np.array([label_map[label] for label in y]).astype(int) #convert to int.
 
     return X, y, -1
 
