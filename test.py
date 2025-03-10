@@ -36,7 +36,7 @@ output_path = config["paths"]["output_folder"]
 
 # Model Configuration (Assuming LSEnsemble is always model 2)
 model_list = config["models"]
-model_list = [model_list[0], model_list[1], model_list[3], model_list[4]]  # Just LSEnsemble
+# model_list = [model_list[0], model_list[1], model_list[3], model_list[4]]  # Just LSEnsemble
 # model_list = [model_list[2]] # Just LS Ensemble
 
 # Load Datasets
@@ -45,6 +45,7 @@ datasets = load_datasets(data_path, N_max, dataset_special_cases)
 
 # Process Datasets
 for dataset_name, (X, y, C0) in datasets.items():
+    
     nclass = np.unique(y).shape[0]
 
     if maj_min:
