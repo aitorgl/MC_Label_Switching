@@ -121,6 +121,22 @@ def generate_model_configurations(model_list):
                     "solver": param_dict['MLP_solver'],
                     "alpha": param_dict['MLP_alpha'],
                 })
+            elif model_name == "kNN":
+                updated_config.update({
+                    "n_neighbors": param_dict['kNN_n_neighbors'],
+                    "metric": param_dict['kNN_metric'],
+                })
+            elif model_name == "C4.5":
+                updated_config.update({
+                    "max_depth": param_dict['C45_max_depth'],
+                    "min_samples_split": param_dict['C45_min_samples_split'],
+                    "min_samples_leaf": param_dict['C45_min_samples_leaf'],
+                })
+            elif model_name == "SVM":
+                updated_config.update({
+                    "C": param_dict['SVM_C'],
+                    "gamma": param_dict['SVM_gamma'],
+                })
             CV_config[model_name].append(updated_config)
 
     return CV_config
