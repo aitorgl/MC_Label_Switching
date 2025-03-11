@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import confusion_matrix, cohen_kappa_score, balanced_accuracy_score
+from sklearn.metrics import accuracy_score, balanced_accuracy_score
+from sklearn.metrics import confusion_matrix, cohen_kappa_score
 
 # Imbalanced Learning Metrics
 from imblearn.metrics import geometric_mean_score, sensitivity_score
@@ -36,8 +37,6 @@ output_path = config["paths"]["output_folder"]
 
 # Model Configuration (Assuming LSEnsemble is always model 2)
 model_list = config["models"]
-# model_list = [model_list[0], model_list[1], model_list[3], model_list[4]]  # Just LSEnsemble
-# model_list = [model_list[2]] # Just LS Ensemble
 
 # Load Datasets
 dataset_special_cases = {}
@@ -80,6 +79,7 @@ for dataset_name, (X, y, C0) in datasets.items():
 
     for model_item in model_list:
         model_metrics = {
+            "avg_acc": [],
             "avg_bal_acc": [],
             "avg_kappa": [],
             "avg_geom_mean": [],
@@ -116,6 +116,7 @@ for dataset_name, (X, y, C0) in datasets.items():
             logger.error(f"File {filename_o} not found.")
             continue
     
+        acc_simulations = []
         bal_acc_simulations = []
         kappa_simulations = []
         geom_mean_simulations = []
@@ -141,19 +142,25 @@ for dataset_name, (X, y, C0) in datasets.items():
                 x_train = X_train_n[idx_train_ecoc[j_dic], :]
                 ye_train = Ye_train[j_dic]
                 
+                cw_train = np.ones(len(ye_train)) # Default sample weights
+                
                 x_test = X_test_n[idx_test_ecoc[j_dic], :]
                 ye_test = Ye_test[j_dic]
     
                 unique_labels = np.unique(ye_train)
                 if len(unique_labels) < 2:
-                    ye_pred = np.zeros_like(ye_test)
+                    ye_pred = ye_test # np.zeros_like(ye_test)
                     if flag_swap_test[j_dic]:
                         ye_pred = ye_pred * -1
                     Ye_pred[:, j_dic] = ye_pred
                 else:
-                    cv_config = best_model_config[j_dic][0] #get the config only
+                    cv_config = best_model_config[j_dic][0] # Get the best config only
                     model = model_class(**cv_config)
-                    model.fit(x_train, ye_train)
+                        # Train the model
+                    if model_name == "MLPClassifier" or model_name == "kNN":
+                        model.fit(x_train, ye_train)
+                    else:
+                        model.fit(x_train, ye_train, sample_weight=cw_train)
                     ye_pred = model.predict(x_test)
                     if flag_swap_test[j_dic]:
                         ye_pred *= -1
@@ -163,11 +170,13 @@ for dataset_name, (X, y, C0) in datasets.items():
     
             mat_confusion_ab = confusion_matrix(y_test, y_pred_MC_ab, labels=class_labels)
             cohen_kappa_ab = cohen_kappa_score(y_test, y_pred_MC_ab)
+            acc_ab = accuracy_score(y_test, y_pred_MC_ab)
             bal_acc_ab = balanced_accuracy_score(y_test, y_pred_MC_ab)
             geom_mean_ab = geometric_mean_score(y_test, y_pred_MC_ab, average='weighted')
-            sensitivity_ab = sensitivity_score(y_test, y_pred_MC_ab, average='macro')
+            sensitivity_ab = sensitivity_score(y_test, y_pred_MC_ab, average='weighted')
             
             # Store metrics for the current simulation
+            acc_simulations.append(acc_ab)
             bal_acc_simulations.append(bal_acc_ab)
             kappa_simulations.append(cohen_kappa_ab)
             geom_mean_simulations.append(geom_mean_ab)
@@ -175,10 +184,12 @@ for dataset_name, (X, y, C0) in datasets.items():
             
         # Calculate the average and standard deviation for the model
         model_metrics = {
+            "avg_acc": np.mean(acc_simulations),
             "avg_bal_acc": np.mean(bal_acc_simulations),
             "avg_kappa": np.mean(kappa_simulations),
             "avg_geom_mean": np.mean(geom_mean_simulations),
             "avg_sensitivity": np.mean(sensitivity_simulations),
+            "std_acc": np.std(acc_simulations),
             "std_bal_acc": np.std(bal_acc_simulations),
             "std_kappa": np.std(kappa_simulations),
             "std_geom_mean": np.std(geom_mean_simulations),
@@ -190,10 +201,11 @@ for dataset_name, (X, y, C0) in datasets.items():
         
         # Print results with 5 decimals
         logger.info('')
+        logger.info(f"Accuracy: {model_metrics['avg_acc']:.5f} \u00B1 {model_metrics['std_acc']:.5f}")
         logger.info(f"Balanced Accuracy: {model_metrics['avg_bal_acc']:.5f} \u00B1 {model_metrics['std_bal_acc']:.5f}")
         logger.info(f"Cohen's Kappa: {model_metrics['avg_kappa']:.5f} \u00B1 {model_metrics['std_kappa']:.5f}")
         logger.info(f"Geometric Mean Score (weighted): {model_metrics['avg_geom_mean']:.5f} \u00B1 {model_metrics['std_geom_mean']:.5f}")
-        logger.info(f"Sensitivity Score: {model_metrics['avg_sensitivity']:.5f} \u00B1 {model_metrics['std_sensitivity']:.5f}")
+        logger.info(f"Sensitivity Score (weighted): {model_metrics['avg_sensitivity']:.5f} \u00B1 {model_metrics['std_sensitivity']:.5f}")
 
     
         # Save the combined configuration and metrics using pickle
