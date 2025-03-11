@@ -78,7 +78,6 @@ model_selection = config["simulation"]["model_selection"]
 
 # Model Configuration
 model_list = config["models"]
-# model_list = [model_list[0], model_list[1], model_list[3], model_list[4]]  # Just LSEnsemble
 
 # Generate Model Configurations
 CV_config = generate_model_configurations(model_list)
@@ -187,7 +186,7 @@ for dataset_name, (X, y, C0) in datasets.items():
                 x_train = X_train_cv[idx_train_ecoc[j_dic], :]
                 x_test = X_test_cv[idx_test_ecoc[j_dic], :]
     
-                cw_train = np.ones(len(ye_train))
+                cw_train = np.ones(len(ye_train)) # Default sample weights
                 
                 for model_item in model_list:
                     model_name = model_item["name"]
@@ -200,7 +199,7 @@ for dataset_name, (X, y, C0) in datasets.items():
                         model = model_class(**cv_config)
                                 
                         # Train the model
-                        if model_name == "MLPClassifier":
+                        if model_name == "MLPClassifier" or model_name == "kNN":
                             model.fit(x_train, ye_train)
                         else:
                             model.fit(x_train, ye_train, sample_weight=cw_train)
@@ -221,7 +220,7 @@ for dataset_name, (X, y, C0) in datasets.items():
 
                         metric_conf[model_name][k_conf, j_dic, nFold-1, k_simu] = metric
     
-                        if metric > best_metric_peak[model_name][j_dic]:
+                        if metric >= best_metric_peak[model_name][j_dic]:
                             best_metric_peak[model_name][j_dic] = metric
                             best_model_peak[model_name][j_dic] = [cv_config, metric, CM]
                             if model_selection == "peak" and verbose:

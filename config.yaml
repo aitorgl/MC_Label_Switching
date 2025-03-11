@@ -7,7 +7,7 @@ simulation:
   verbose: true
   synth_dataset: false
   f_sel: balanced_accuracy_score
-  ecoc_enc: complete # 'sparse' #  'OVA' # 'dense' # 'OVO' # 
+  ecoc_enc: 'sparse' # complete # 'OVA' # 'dense' # 'OVO' # 
   flg_swp: true
   maj_min: false
   min_maj: false
@@ -19,7 +19,7 @@ simulation:
 
 paths:
   data_folder: datasets
-  output_folder: results
+  output_folder: results_test
 
 models:
   - name: LogisticRegression
@@ -90,5 +90,33 @@ models:
       is_unbalance: true
     dynamic_params:
       LGBM_num_leaves: [31]
-      LGBM_learning_rate: [0.1]
+      LGBM_learning_rate: [0.1, 0.05]
       LGBM_n_estimators: [20, 40, 60]
+
+  - name: kNN
+    class: sklearn.neighbors.KNeighborsClassifier
+    params:
+      algorithm: auto
+      weights: uniform
+    dynamic_params:
+      kNN_n_neighbors: [3, 5, 7, 9]  # Common values for k
+      kNN_metric: [euclidean, manhattan, minkowski]  # Common distance metrics
+
+  - name: C4.5
+    class: sklearn.tree.DecisionTreeClassifier
+    params:
+      criterion: entropy  # C4.5 uses entropy-based splitting
+      splitter: best
+    dynamic_params:
+      C45_max_depth: [None, 5, 10, 20]  # Limits tree depth for regularization
+      C45_min_samples_split: [2, 5, 10]  # Minimum samples needed to split a node
+      C45_min_samples_leaf: [1, 2, 5]  # Minimum samples in a leaf node
+
+  - name: SVM
+    class: sklearn.svm.SVC
+    params:
+      kernel: rbf
+      probability: true  # Enables probability estimation
+    dynamic_params:
+      SVM_C: [0.01, 0.1, 1, 10, 100, 1000]  # Regularization parameter
+      SVM_gamma: [scale, auto, 0.01, 0.1, 1]  # Kernel coefficient
