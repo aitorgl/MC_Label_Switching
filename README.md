@@ -50,7 +50,7 @@ For further details on likelihood ratio estimation and Bayes threshold transform
 1.  **Clone the repository:**
 
     ```bash
-    git clone [https://github.com/franjgs/MC_Label_Switching.git](https://github.com/franjgs/MC_Label_Switching.git)
+    git clone https://github.com/franjgs/MC_Label_Switching.git
     cd MC_Label_Switching
     ```
 
