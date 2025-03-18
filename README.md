@@ -101,4 +101,4 @@ For further details on likelihood ratio estimation and Bayes threshold transform
 
 ## License
 
-* UC3M
+* Copyright (c) 2025 Aitor Gutiérrez López and Francisco Javier González Serrano (UC3M)
