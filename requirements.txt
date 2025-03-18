@@ -1,0 +1,24 @@
+imbalanced-learn==0.13.0
+keras==2.15.0
+lightgbm==4.5.0
+matplotlib==3.10.0
+matplotlib-inline==0.1.7
+numpy==1.26.4
+pandas==2.2.3
+PyYAML==6.0.2
+scikit-learn==1.5.2
+scipy==1.15.1
+spyder==6.0.3
+spyder-kernels==3.0.2
+tensorboard==2.15.2
+tensorboard-data-server==0.7.2
+tensorflow ==2.15.0
+tensorflow-estimator==2.15.0
+tensorflow-hub==0.16.1
+tensorflow-io-gcs-filesystem==0.37.0
+tensorflow-macos==2.15.1
+tensorflow-text == 2.15.0
+tf_keras==2.16.0
+torch==2.6.0
+torchensemble==0.2.0
+torchvision==0.21.0
