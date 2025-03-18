@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from libraries.ML_models import MLPClassifierTorch, LogisticRegressionTorch
+from libraries.functions import compute_imbalance_ratio
 
 import random
 from imblearn.over_sampling import SMOTE
@@ -14,7 +14,7 @@ from functools import reduce
 
 eps=np.finfo(float).eps
 
-
+# LBFGSScipy: taken from https://gist.github.com/arthurmensch/c55ac413868550f89225a0b9212aa4cd
 class LBFGSScipy(Optimizer):
     """Wrap L-BFGS algorithm, using scipy routines.
     .. warning::
@@ -179,17 +179,35 @@ def label_switching(y, w=None, alphasw=0.0, betasw=0.0):
 
     return ysw, wsw
 
-def compute_weights(targets_train, RB = 1, IR = 1, mode = 'Normal'):
-    # RB define la cantidad de reequilibrado final
-    # Si RB = IR => No se reequilibra. Si RB = 1, es un reequilibrado full.
-    
-    weights = np.ones_like(targets_train) # .astype('float')
-    if mode == 'Small':
-        weights[np.where(targets_train<=0)[0]] = RB/IR
-    else:
-        weights[np.where(targets_train>0)[0]] = RB # IR/RB
-    
-    return torch.from_numpy(weights) # /np.sum(weights))
+
+def compute_weights(targets_train, RI_C=1, Q_P=1, mode='normal'):
+    """
+    Computes weights for training samples based on the desired cost Rebalance intensity (RI_C)
+    and the imbalance ratio (Q_P).
+
+    Args:
+        targets_train (np.ndarray): Array of training targets (-1 or 1).
+        RI_C (float): Desired cost Rebalance intensity. Defaults to 1 (no explicit rebalancing).
+            - If float (>= 1):
+                - If mode is "proportional_minority": Weight of the positive class (assumed minority if Q_P > 1) is RI_C (capped at Q_P).
+                - If mode is "proportional_majority_reverse": Weight of the negative class is 1/RI_C (capped at 1/Q_P).
+        Q_P (float): Imbalance ratio (number of majority class samples / number of minority class samples). Defaults to 1.
+        mode (str): Mode of rebalancing. Defaults to 'proportional_minority'.
+            - 'normal': Weights the minority class (positive if Q_P > 1) by RI_C.
+            - 'reverse': Weights the majority class (negative if Q_P > 1) by 1/RI_C.
+
+    Returns:
+        torch.Tensor: Tensor of weights for each training sample.
+    """
+    weights = np.ones_like(targets_train, dtype=float)
+
+    if RI_C >= 1:
+        if mode == 'normal':
+            weights[targets_train > 0] = min(RI_C, Q_P)
+        elif mode == 'reverse':
+            weights[targets_train <= 0] = 1 / min(RI_C, Q_P)
+
+    return torch.from_numpy(weights)     # /np.sum(weights))
 
 
 def generate_batches(nBatch, param, mode='random', seed=42):
@@ -397,134 +415,6 @@ def weighted_mse_loss(inputs, target, weights=None):
     weighted_diff = weights * (inputs - target) ** 2
     return 0.5 * torch.sum(weighted_diff) #  / torch.sum(weights)
 
-def weighted_kl_loss(inputs, target, weights=None):
-    """
-    Compute a weighted loss similar to KL Divergence.
-
-    Parameters:
-        inputs (torch.Tensor or np.ndarray): Predicted logits or probabilities.
-        target (torch.Tensor or np.ndarray): Target probabilities.
-        weights (torch.Tensor or None): Weights for each sample. If None, uniform weights are used.
-
-    Returns:
-        torch.Tensor: The computed weighted KL divergence loss.
-    """
-    # Convert numpy arrays to torch tensors if necessary
-    if isinstance(target, np.ndarray):
-        target = torch.from_numpy(target).float()
-    if isinstance(inputs, np.ndarray):
-        inputs = torch.from_numpy(inputs).float()
-    
-    # Ensure inputs and target are in the range [0, 1]
-    inputs_01 = torch.clip(0.5 * (inputs + 1), 1e-5, 1 - 1e-5)  # Avoid log(0)
-    target_01 = torch.clip(0.5 * (target + 1), 1e-5, 1 - 1e-5)  # Avoid log(0)
-    
-    # If weights are not provided, use uniform weights
-    if weights is None:
-        weights = torch.ones_like(inputs_01)
-
-    # Compute the KL divergence term
-    kl_div = target_01 * torch.log(target_01 / inputs_01) + (1 - target_01) * torch.log((1 - target_01) / (1 - inputs_01))
-    
-    # Apply weights and sum the loss
-    weighted_kl = weights * kl_div
-    return torch.sum(weighted_kl)
-    
-def weighted_bce_loss(inputs, target, weights=None):
-    # Convert numpy arrays to torch tensors if necessary
-    if isinstance(target, np.ndarray):
-        target = torch.from_numpy(target).double()  # Convert to double (float64)
-    if isinstance(inputs, np.ndarray):
-        inputs = torch.from_numpy(inputs).double()  # Convert to double (float64)
-
-    # Ensure inputs and targets are within [0, 1] for BCE loss
-    inputs_01 = torch.clamp(0.5 * (inputs + 1), 0, 1).double()  # Ensure double type
-    targets_01 = torch.clamp(0.5 * (target + 1), 0, 1).double()  # Ensure double type
-
-    # If weights are not provided, use uniform weights
-    if weights is None:
-        weights = torch.ones_like(inputs_01).double()  # Ensure weights are double
-    elif isinstance(weights, np.ndarray):
-        weights = torch.tensor(weights, dtype=torch.float64)  # Ensure weights are double
-        
-    # Ensure weights have the shape [batch_size, 1]
-    if weights.ndimension() == 1:
-        weights = weights.unsqueeze(1)  # Add an extra dimension to make shape [batch_size, 1]
-    
-    # Compute the BCE loss
-    loss_bce = nn.BCELoss(weight=weights)
-    return loss_bce(inputs_01, targets_01)
-
-def weighted_bce_logit_loss(inputs, target, weights=None):
-    # Convert numpy arrays to torch tensors if necessary
-    if isinstance(target, np.ndarray):
-        target = torch.from_numpy(target).double()  # Convert to double (float64)
-    if isinstance(inputs, np.ndarray):
-        inputs = torch.from_numpy(inputs).double()  # Convert to double (float64)
-        
-    # If weights are not provided, use uniform weights
-    if weights is None:
-        weights = torch.ones_like(inputs).double()  # Ensure weights are double
-    elif isinstance(weights, np.ndarray):
-        weights = torch.tensor(weights, dtype=torch.float64)  # Ensure weights are double
-
-    # Ensure weights have the shape [batch_size, 1]
-    if weights.ndimension() == 1:
-        weights = weights.unsqueeze(1)  # Add an extra dimension to make shape [batch_size, 1]
-    
-    # Compute the BCEWithLogits loss
-    loss_bce_logit = nn.BCEWithLogitsLoss(weight=weights)
-    return loss_bce_logit(inputs, target)
-
-def f1_loss(predict, target, weights=None):
-    # Convert numpy arrays to torch tensors if necessary
-    if isinstance(target, np.ndarray):
-        target = torch.from_numpy(target).double()  # Convert to double (float64)
-    target = 0.5 * (target + 1)
-    if isinstance(predict, np.ndarray):
-        predict = torch.from_numpy(predict).double()  # Convert to double (float64)
-    predict = torch.clamp(0.5 * (predict + 1), 0, 1)  # Ensure values are within [0, 1
-    
-    # If weights are not provided, use uniform weights
-    if weights is None:
-        weights = torch.ones_like(target).double()  # Ensure weights are double
-    elif isinstance(weights, np.ndarray):
-        weights = torch.tensor(weights, dtype=torch.float64)  # Ensure weights are double
-
-    # Ensure weights have the shape [batch_size, 1]
-    if weights.ndimension() == 1:
-        weights = weights.unsqueeze(1)  # Add an extra dimension to make shape [batch_size, 1]]
-
-    # Initialize BCEWithLogitsLoss once, passing weight
-    bce_loss_fn = nn.BCEWithLogitsLoss(weight=weights)
-
-    loss = 0
-    lack_cls = target.sum(dim=0) == 0
-    if lack_cls.any():
-        loss += bce_loss_fn(predict[:, lack_cls], target[:, lack_cls])
-
-    tp = predict * target
-    tp = tp.sum(dim=0)
-    
-    fp = predict * (1 - target)
-    fp = fp.sum(dim=0)
-    
-    fn = ((1 - predict) * target)
-    fn = fn.sum(dim=0)
-    
-    tn = (1 - predict) * (1 - target)
-    tn = tn.sum(dim=0)
-    
-    soft_f1_class1 = 2 * tp / (2 * tp + fn + fp + 1e-8)
-    soft_f1_class0 = 2 * tn / (2 * tn + fn + fp + 1e-8)
-    cost_class1 = 1 - soft_f1_class1  # Reduce 1 - soft_f1_class1 to increase soft-f1 on class 1
-    cost_class0 = 1 - soft_f1_class0  # Reduce 1 - soft_f1_class0 to increase soft-f1 on class 0
-    cost = 0.5 * (cost_class1 + cost_class0)  # Take into account both class 1 and class 0
-    macro_cost = cost.mean()  # Average on all labels
-    
-    return macro_cost + loss
-
-
 # Base class to handle common initialization logic
 class BaseAsymmetricMLP(nn.Module):
     def __init__(self, input_size, hidden_size, alpha, beta, activation_fn=torch.tanh):
@@ -589,10 +479,6 @@ ACTIVATION_FUNCTIONS = {
 # Mapping for loss functions
 LOSS_FUNCTIONS = {
     "MSE": weighted_mse_loss,
-    "KL": weighted_kl_loss,
-    "BCE": weighted_bce_loss,
-    "BCE_logit": weighted_bce_logit_loss,
-    "F1": f1_loss,
 }
 
 class LSEnsemble(nn.Module):
@@ -628,9 +514,6 @@ class LSEnsemble(nn.Module):
         - base_learner (str, optional, default='FAMLP'):
             Type of base learner used in the ensemble:
                 - 'FAMLP': Full Asymmetric MLP.
-                - 'LogReg': Customized Logistic Regression.
-                - 'Parzen': MLP Bayes.
-                - 'AMLP': Simple Asymmetric MLP.
         - activation_fn (str, optional, default="tanh"): 
             Activation function for the hidden layers of the model. Common options:
             'tanh', 'relu', or 'sigmoid'.
@@ -643,9 +526,6 @@ class LSEnsemble(nn.Module):
         - loss_fn (str, optional, default='MSE'): 
             Loss function used for training. Common options:
             - 'MSE': Mean Squared Error.
-            - 'KL': Kullback-Leibler Divergence.
-            - 'BCE': Binary Cross-Entropy for classification tasks.
-            - 'F1': F1 Score
         """
         super(LSEnsemble, self).__init__()
         self.num_experts = num_experts
@@ -686,29 +566,7 @@ class LSEnsemble(nn.Module):
             self.initialize_experts(input_size)
 
     def initialize_experts(self, input_size):
-        if self.base_learner == 'AMLP':  # Use MLPClassifierTorch if lbfgs is set to 'MLP'
-            self.experts = nn.ModuleList([
-                MLPClassifierTorch(
-                    input_dim=input_size,
-                    hidden_layer_sizes=(self.hidden_size,),
-                    activation=self.activation_fn.__name__,
-                    alpha=self.alpha,   # Pass alpha
-                    beta=self.beta,     # Pass beta
-                    batch_size=self.n_batch,
-                    max_iter=self.n_epoch,
-                    solver='adam', # 'lbfgs'#  if self.lbfgs else 'adam'
-                ) for _ in range(self.num_experts)
-            ])
-        elif self.base_learner == 'LogReg':
-            self.experts = nn.ModuleList([
-                LogisticRegressionTorch(
-                    input_dim=input_size,
-                    alpha=self.alpha,
-                    beta=self.beta,
-                    num_epochs=self.n_epoch
-                ) for _ in range(self.num_experts)
-            ])
-        else:
+        if self.base_learner == 'FAMLP':  # Use Full AsymmetricMLP 
             # Create experts with the actual input size
             self.experts = nn.ModuleList([
                 AsymmetricMLP(
@@ -766,22 +624,15 @@ class LSEnsemble(nn.Module):
         elif set(unique_labels) == {-1, 1}:  # Case for binary {-1, 1}
             self.bin_format = -1
         
-        # Compute the class counts for -1 and 1
-        N0_tr = np.sum(y_np == -1)
-        N1_tr = np.sum(y_np == 1)
-        
-        # Prevent division by zero if classes are highly imbalanced
-        if N1_tr == 0:
-            QP_tr = 1000  # Or some large value to indicate extreme imbalance
-        else:
-            P0_tr = N0_tr / (N0_tr + N1_tr)
-            P1_tr = N1_tr / (N0_tr + N1_tr)
-            QP_tr = P0_tr / P1_tr if P1_tr >= eps else 1000
+        QP_tr = compute_imbalance_ratio(y_np)
         
         self.QP_tr = QP_tr
     
-        Q_RB_S = max(Q_RB_S, 1)
-        sampling_strategy = min(Q_RB_S / QP_tr, 1.0)
+        apply_rebalancing = False
+        if Q_RB_S > 1:
+            sampling_strategy = min(Q_RB_S / QP_tr, 1.0)
+            self.Q_RB_S = QP_tr*sampling_strategy
+            apply_rebalancing = True
     
         def apply_smote(x_np, y_np, w_np):
             """
@@ -830,8 +681,7 @@ class LSEnsemble(nn.Module):
             y_RB_SW = torch.where(targets_sw > 0, (1 - 2 * self.beta), -(1 - 2 * self.alpha))
             return torch.from_numpy(X_RB).float().to(x.device), y_RB_SW, w_RB_SW
     
-        if Q_RB_S > 1:
-            # self.QP_RB_tr = QP_tr/Q_RB_S # Commented (Verified) 
+        if apply_rebalancing:
             if RB_each_expert:
                 # Generate unique SMOTE data for each expert
                 for expert in self.experts:
@@ -911,13 +761,13 @@ class LSEnsemble(nn.Module):
         Returns:
         - self: The updated model after training.
         """
+                    
         # Initialize weights for each expert
         weights = torch.ones((self.experts[0].y.shape[0], self.num_experts)).to(w_train.device)
     
         # Compute weights for each expert
         for i, expert in enumerate(self.experts):
-            # weights[:, i] = compute_weights(expert.y, RB=self.Q_RB_C, IR=1, mode='Normal') * w_train  # Scale by training weights
-            weights[:, i] = compute_weights(expert.y, RB=self.Q_RB_C, IR=1, mode='Normal') * expert.w  # Scale by training weights
+            weights[:, i] = compute_weights(expert.y, RI_C=self.Q_RB_C, Q_P=self.QP_tr, mode='normal') * expert.w  # Scale by training weights
     
         # Training loop for experts
         if optim == 'lbfgs':
@@ -1051,20 +901,3 @@ class LSEnsemble(nn.Module):
         o_pred_01 = (o_pred + 1) / 2
         
         return o_pred_01.numpy().astype(int)  # Convert back to numpy if necessary
-
-    # Method for GridSearchCV compatibility
-    def get_params(self, deep=True):
-        return {
-            'hidden_size': self.hidden_size,
-            'num_experts': self.num_experts,
-            'alpha': self.alpha,
-            'beta': self.beta,
-            'Q_RB_C': self.Q_RB_C,
-            'Q_RB_S': self.Q_RB_S,
-            'n_epoch': self.n_epoch
-        }
-
-    def set_params(self, **params):
-        for param, value in params.items():
-            setattr(self, param, value)
-        return self

@@ -11,6 +11,49 @@ import logging
 from itertools import product
 import importlib
 
+def compute_imbalance_ratio(targets):
+    """
+    Computes the imbalance ratio (majority class count / minority class count)
+    for binary targets, handling cases with values 0 and 1, or False and True.
+
+    Args:
+        targets (np.ndarray): Array of binary target values. Can contain:
+            - -1 and 1
+            - 0 and 1
+            - False and True
+
+    Returns:
+        float: The imbalance ratio. Returns 1 if classes are balanced or if
+               only one class is present. Returns np.inf if only the minority
+               class is present.
+    """
+    if targets.dtype == bool:
+        negative_label = False
+        positive_label = True
+    else:
+        negative_label = 0
+        positive_label = 1
+        if -1 in targets:
+            negative_label = -1
+            positive_label = 1
+
+    n_negative = np.sum(targets == negative_label)
+    n_positive = np.sum(targets == positive_label)
+
+    if n_positive == 0 and n_negative == 0:
+        return 1.0  # No data
+    elif n_positive == 0:
+        return np.inf  # Only negative class (majority)
+    elif n_negative == 0:
+        return 1000 # Only positive class (minority)
+
+    if n_negative >= n_positive:
+        imbalance_ratio = n_negative / n_positive
+    else:
+        imbalance_ratio = n_positive / n_negative
+
+    return imbalance_ratio
+
 def get_class_from_string(class_path):
     """Converts a string class path to a class object."""
     module_path, class_name = class_path.rsplit('.', 1)
@@ -63,8 +106,44 @@ def generate_model_configurations(model_list):
                 model_item["dynamic_params"]["LS_Q_C"] = [1]
             if not RI_C_optimization:
                 model_item["dynamic_params"]["LS_Q_RB_C"] = [1]
+            else:
+                model_item['params']['Q_RB_C_mode'] = "normal"
+                Q_RB_C = model_item['dynamic_params']['LS_Q_RB_C']
+                Q_RB_C_intervals = None  # Initialize Q_RB_C_intervals
+                
+                if isinstance(Q_RB_C, list) and len(Q_RB_C) > 0:
+                    if Q_RB_C[0] == "auto":
+                        if len(Q_RB_C) > 1 and isinstance(Q_RB_C[1], int) and Q_RB_C[1] > 0:
+                            model_item['params']['Q_RB_C_mode'] = "auto"
+                            Q_RB_C_intervals = Q_RB_C[1]
+                            model_item['dynamic_params']['LS_Q_RB_C']= list(range(1, Q_RB_C_intervals + 1))
+                        else:
+                            print("Error in ALSE configuration: When Q_RB_C[0] is 'auto', the next element must be a positive integer.")
+                    elif Q_RB_C[0] == "full":
+                        model_item['params']['Q_RB_C_mode'] = "full"
+                        Q_RB_C_intervals = 1
+                    else:
+                        Q_RB_C_intervals = len(Q_RB_C)
             if not RI_P_optimization:
                 model_item["dynamic_params"]["LS_Q_RB_S"] = [1]
+            else:
+                model_item['params']['Q_RB_S_mode'] = "normal"
+                Q_RB_S = model_item['dynamic_params']['LS_Q_RB_S']
+                Q_RB_S_intervals = None  # Initialize Q_RB_S_intervals
+                
+                if isinstance(Q_RB_S, list) and len(Q_RB_S) > 0:
+                    if Q_RB_S[0] == "auto":
+                        if len(Q_RB_S) > 1 and isinstance(Q_RB_S[1], int) and Q_RB_S[1] > 0:
+                            model_item['params']['Q_RB_S_mode'] = "auto"
+                            Q_RB_S_intervals = Q_RB_S[1]
+                            model_item['dynamic_params']['LS_Q_RB_S']= list(range(1, Q_RB_S_intervals + 1))
+                        else:
+                            print("Error in ALSE configuration: When Q_RB_S[0] is 'auto', the next element must be a positive integer.")
+                    elif Q_RB_S[0] == "full":
+                        model_item['params']['Q_RB_S_mode'] = "full"
+                        Q_RB_S_intervals = 1
+                    else:
+                        Q_RB_S_intervals = len(Q_RB_S)
 
         dynamic_params = model_item["dynamic_params"]
         keys = list(dynamic_params.keys())
@@ -204,8 +283,7 @@ def apply_ecoc_binarization(M, y_train, y_test, apply_flag_swap=True, flag_swap=
             if dicotomia[int(clase) - 1] != 0:  # Check for valid dichotomy label
                 y_train_ecoc.append(dicotomia[int(clase) - 1])
                 idx_train_ecoc[j_dic].append(i)
-            else:
-                print(1)
+
 
         y_train_ecoc = np.array(y_train_ecoc)
         N0_tr = np.sum(y_train_ecoc == -1)
@@ -231,8 +309,6 @@ def apply_ecoc_binarization(M, y_train, y_test, apply_flag_swap=True, flag_swap=
             if dicotomia[int(clase) - 1] != 0:  # Check for valid dichotomy label
                 y_test_ecoc.append(dicotomia[int(clase) - 1])
                 idx_test_ecoc[j_dic].append(i)
-            else:
-                print(2)
 
         y_test_ecoc = np.array(y_test_ecoc)
         if flag_swap[j_dic]:

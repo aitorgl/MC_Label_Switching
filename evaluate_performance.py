@@ -18,9 +18,13 @@ from libraries.ecoc import ECOC
 from libraries.imbalance_degree import imbalance_degree
 from libraries.functions import apply_ecoc_binarization
 
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+# Suppress ConvergenceWarnings
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 # Load Configuration
-config = load_config('config.yaml')
+config = load_config('config_test.yaml')
 
 # Setup Logger
 logger = setup_logger(config)
@@ -29,6 +33,7 @@ logger = setup_logger(config)
 data_path = config["paths"]["data_folder"]
 Test_size = config["simulation"]["test_size"]
 N_max = config["simulation"]["N_MAX"]
+n_simus = config["simulation"]["n_simus"]
 ECOC_enc = config["simulation"]["ecoc_enc"]
 flg_swp = config["simulation"]["flg_swp"]
 maj_min = config["simulation"]["maj_min"]
@@ -37,6 +42,7 @@ output_path = config["paths"]["output_folder"]
 
 # Model Configuration (Assuming LSEnsemble is always model 2)
 model_list = config["models"]
+model_list = [model_list[2]]
 
 # Load Datasets
 dataset_special_cases = {}
@@ -124,7 +130,10 @@ for dataset_name, (X, y, C0) in datasets.items():
         f1_simulations = []
         mcc_simulations = []
     
-        for k_simu in range(100):  # Assuming 100 test simulations
+        n_simus = max(n_simus, 20) # Assuming 100 test simulations
+        for k_simu in range(n_simus):  
+            logger.info(f'    Simulation: {k_simu} out of {n_simus}')
+            
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.01 * Test_size, random_state=42 + k_simu)
             M_tst = X_test.shape[0]
     

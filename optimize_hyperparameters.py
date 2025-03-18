@@ -22,7 +22,6 @@ METRIC_FUNCTIONS = {
     "matthews_corrcoef": matthews_corrcoef,
 }
 
-
 from sklearn.model_selection import (
     KFold,
     train_test_split,
@@ -38,13 +37,14 @@ from libraries.data_loading import load_datasets
 from libraries.functions import load_config, setup_logger, get_class_from_string
 from libraries.functions import generate_model_configurations, apply_ecoc_binarization
 
+from libraries.functions import compute_imbalance_ratio
 from libraries.imbalance_degree import imbalance_degree
 
 # Suppress ConvergenceWarnings
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 # Load Configuration
-config = load_config('config.yaml')
+config = load_config('config_train.yaml')
 
 # -----------------------------------------------------------------------------
 # INITIALIZE LOGGER
@@ -78,6 +78,8 @@ model_selection = config["simulation"]["model_selection"]
 
 # Model Configuration
 model_list = config["models"]
+model_list = [model_list[2]]
+# del model_list[2]
 
 # Generate Model Configurations
 CV_config = generate_model_configurations(model_list)
@@ -135,6 +137,7 @@ for dataset_name, (X, y, C0) in datasets.items():
             QC_optimization = model_item['LSE_optimization']['QC']
             RI_C_optimization = model_item['LSE_optimization']['RI_C']
             RI_P_optimization = model_item['LSE_optimization']['RI_P']
+
             logger.info(f'    Switching: {int(SW_optimization)}, QC: {int(QC_optimization)}, Cost: {int(RI_C_optimization)}, Population: {int(RI_P_optimization)}')
         
         dynamic_combinations = model_item["dynamic_params"]
@@ -172,6 +175,7 @@ for dataset_name, (X, y, C0) in datasets.items():
             # Apply ECOC binarization
             Ye_train, Ye_test, flag_swap, idx_train_ecoc, idx_test_ecoc = apply_ecoc_binarization(M, y_train_cv, y_test_cv, apply_flag_swap = flg_swp)
                 
+            QP_tr = np.zeros((num_dichotomies))
             for j_dic in range(num_dichotomies):
                 ye_train, ye_test = Ye_train[j_dic], Ye_test[j_dic]
                 
@@ -183,6 +187,8 @@ for dataset_name, (X, y, C0) in datasets.items():
                 if len(unique_labels_train) < 2:
                     continue
 
+                QP_tr[j_dic] = compute_imbalance_ratio(ye_train)
+                                                        
                 x_train = X_train_cv[idx_train_ecoc[j_dic], :]
                 x_test = X_test_cv[idx_test_ecoc[j_dic], :]
     
@@ -191,11 +197,56 @@ for dataset_name, (X, y, C0) in datasets.items():
                 for model_item in model_list:
                     model_name = model_item["name"]
                     model_class = get_class_from_string(model_item["class"])
-                    
+                    if model_name == "LSEnsemble":
+                        if model_item['LSE_optimization']['RI_C']:
+                            # Cost: auto
+                            if model_item['params']['Q_RB_C_mode'] == "auto":
+                                n_items = len(model_item['dynamic_params'].get('LS_Q_RB_C', []))
+                                if n_items > 0:
+                                    model_item['dynamic_params']['LS_Q_RB_C'] = np.linspace(1, QP_tr[j_dic], n_items).tolist()
+                            elif model_item['params']['Q_RB_C_mode'] == "full": # Full Rebalance
+                                model_item['dynamic_params']['LS_Q_RB_C'] = [QP_tr[j_dic]]
+                                
+                        if model_item['LSE_optimization']['RI_P']:
+                            # Population: auto
+                            if model_item['params']['Q_RB_S_mode'] == "auto":
+                                n_items = len(model_item['dynamic_params'].get('LS_Q_RB_S', []))
+                                if n_items > 0:
+                                    model_item['dynamic_params']['LS_Q_RB_S'] = np.linspace(1, QP_tr[j_dic], n_items).tolist()
+                            elif model_item['params']['Q_RB_S_mode'] == "full": # Full Rebalance
+                                model_item['dynamic_params']['LS_Q_RB_S'] = [QP_tr[j_dic]]
+                                
+                        CV_temp = CV_config[model_name]
+                        CV_config[model_name] = []  # Reset to avoid accumulating old configs
+                        params = model_item['params']
+                        dynamic_params = model_item['dynamic_params']
+                        # Create parameter grid
+                        param_grid = {
+                            "base_learner": [params['base_learner']],
+                            "optim": [params['optim']],
+                            "activation_fn": [params['activation_fn']],
+                            "loss_fn": [params['loss_fn']],
+                            "alpha": dynamic_params['LS_alpha'],
+                            "beta": dynamic_params['LS_beta'],
+                            "QC": dynamic_params['LS_Q_C'],
+                            "Q_RB_S": dynamic_params['LS_Q_RB_S'],
+                            "Q_RB_C": dynamic_params['LS_Q_RB_C'],
+                            "num_experts": dynamic_params['LS_num_experts'],
+                            "hidden_size": dynamic_params['LS_hidden_size'],
+                            "drop_out": dynamic_params['LS_drop_out'],
+                            "n_batch": dynamic_params['LS_n_batch'],
+                            "n_epoch": dynamic_params['LS_n_epoch'],
+                            "mode": dynamic_params['LS_mode'],
+                            "input_size": [input_size],
+                        }
+            
+                        # Generate all parameter combinations
+                        for combination in product(*param_grid.values()):
+                            CV_config[model_name].append(dict(zip(param_grid.keys(), combination)))
+                
                     k_conf = 0
                     for cv_config in CV_config[model_name]:
-                        if model_name == "LSEnsemble":
-                            cv_config.update({"input_size": input_size})
+
                         model = model_class(**cv_config)
                                 
                         # Train the model
