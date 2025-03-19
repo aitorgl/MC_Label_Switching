@@ -877,7 +877,7 @@ class LSEnsemble(nn.Module):
         Q_RB_C = self.Q_RB_C
         Q_RB_S = self.Q_RB_S
         
-        QR_tr = QP_tr / (Q_RB_C * Q_RB_S)
+        QR_tr = max(1, QP_tr / (Q_RB_C * Q_RB_S))
                
         # Get the averaged expert predictions (o_pred)
         o_pred = self.forward(x)
