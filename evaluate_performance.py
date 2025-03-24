@@ -107,12 +107,13 @@ for dataset_name, (X, y, C0) in datasets.items():
             RI_P_optimization = model_item['LSE_optimization']['RI_P']
             logger.info(f'    Switching: {int(SW_optimization)}, QC: {int(QC_optimization)}, Cost: {int(RI_C_optimization)}, Population: {int(RI_P_optimization)}')
 
-    
-            filename_o = f"{dataset_name}_{ECOC_enc}_{model_name}_SW_{int(SW_optimization)}_QC_{int(QC_optimization)}_RIC_{int(RI_C_optimization)}_RIP_{int(RI_P_optimization)}_train.pkl"
+            filename_i = f"{dataset_name}_{ECOC_enc}_{model_name}_SW_{int(SW_optimization)}_QC_{int(QC_optimization)}_RIC_{int(RI_C_optimization)}_RIP_{int(RI_P_optimization)}_train.pkl"
+            filename_o = f"{dataset_name}_{ECOC_enc}_{model_name}_SW_{int(SW_optimization)}_QC_{int(QC_optimization)}_RIC_{int(RI_C_optimization)}_RIP_{int(RI_P_optimization)}_test.pkl"
         else:
-            filename_o = f"{dataset_name}_{ECOC_enc}_{model_name}_train.pkl"
+            filename_i = f"{dataset_name}_{ECOC_enc}_{model_name}_train.pkl"
+            filename_o = f"{dataset_name}_{ECOC_enc}_{model_name}_test.pkl"
     
-        file_path = os.path.join(output_path, filename_o)
+        file_path = os.path.join(output_path, filename_i)
     
         try:
             with open(file_path, 'rb') as f:
@@ -130,11 +131,11 @@ for dataset_name, (X, y, C0) in datasets.items():
         f1_simulations = []
         mcc_simulations = []
     
-        n_simus = max(n_simus, 20) # Assuming 100 test simulations
-        for k_simu in range(n_simus):  
-            logger.info(f'    Simulation: {k_simu} out of {n_simus}')
+        n_simus_new = max(n_simus, 50) 
+        for k_simu in range(n_simus_new):  
+            logger.info(f'    Simulation: {k_simu} out of {n_simus_new}')
             
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.01 * Test_size, random_state=42 + k_simu)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.01 * Test_size, random_state=42 + k_simu%n_simus)
             M_tst = X_test.shape[0]
     
             scaler = StandardScaler()
