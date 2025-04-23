@@ -11,6 +11,12 @@ import logging
 from itertools import product
 import importlib
 
+import random
+
+from sklearn.metrics import f1_score, cohen_kappa_score, matthews_corrcoef
+from sklearn.metrics import accuracy_score, balanced_accuracy_score
+
+
 def compute_imbalance_ratio(targets):
     """
     Computes the imbalance ratio (majority class count / minority class count)
@@ -216,6 +222,12 @@ def generate_model_configurations(model_list):
                     "C": param_dict['SVM_C'],
                     "gamma": param_dict['SVM_gamma'],
                 })
+            elif model_name == "MultiRandBal":
+                updated_config.update({
+                    "n_estimators": param_dict['RB_n_estimators'],
+                    "base_estimator": param_dict['RB_base_estimator'],
+                })
+                
             CV_config[model_name].append(updated_config)
 
     return CV_config
@@ -322,3 +334,176 @@ def apply_ecoc_binarization(M, y_train, y_test, apply_flag_swap=True, flag_swap=
             print(f'Dichotomy {j_dic + 1}: {dicotomia}, N0_tr: {N0_tr}, N1_tr: {N1_tr}, IR = {QP_tr[j_dic]:.2f}')
 
     return Y_train_ecoc, Y_test_ecoc, flag_swap, idx_train_ecoc, idx_test_ecoc
+
+
+def calc_MAE_AMAE_CM(CM):
+    nClases = CM.shape[0]
+    AMAEu = np.zeros(nClases)
+    MAEu = np.zeros(nClases)
+    for kclase in range(nClases):
+        for kotra in range(nClases):
+            MAEu[kclase] += CM[kclase,kotra]*np.abs(kclase-kotra)#/y_test.shape[0]
+            AMAEu[kclase] += CM[kclase,kotra]*np.abs(kclase-kotra)/np.sum(CM, axis=1)[kclase]
+
+    MAE = np.sum(MAEu)/np.sum(CM)
+    AMAE = np.mean(AMAEu)
+    
+    return MAE, AMAE
+
+def calc_MAE_AMAE(y,ye):
+    #labels, ocurrences = np.unique(y,return_counts=True)
+    labels = np.unique(y)
+    
+    MAE = np.mean(np.abs(y-ye))
+    MAEu = np.zeros((labels.shape[0]))
+    for kclase in range(labels.shape[0]):
+        vc = np.nonzero(y==labels[kclase])
+        MAEu[kclase] = np.mean(np.abs(y[vc]-ye[vc]))
+        
+    AMAE = np.mean(MAEu)    
+    
+    return MAE, AMAE
+
+def compute_metrics(y,ye,metrics):
+    
+    metricas=np.zeros(len(metrics))
+    for k in range(len(metrics)):
+        name_metric = metrics[k]
+        if name_metric.lower() == 'mae':
+            #MAE, AMAE = calc_MAE_AMAE_CM(confusion_matrix(y, ye))
+            MAE, AMAE = calc_MAE_AMAE(y, ye)
+            metricas[k] = MAE
+            
+        elif name_metric.lower() == 'amae':
+            #MAE, AMAE = calc_MAE_AMAE(confusion_matrix(y, ye))
+            MAE, AMAE = calc_MAE_AMAE(y, ye)
+            metricas[k] = AMAE
+            
+        elif name_metric.lower() == 'accuracy':                
+            metricas[k] = accuracy_score(y, ye)
+        
+        elif name_metric.lower() == 'balanced_accuracy':                
+            metricas[k] = balanced_accuracy_score(y, ye)
+            
+        elif name_metric.lower() == 'f1':                
+            metricas[k] = f1_score(y, ye, average='macro')
+            
+        elif name_metric.lower() == 'cohen_kappa':                
+            metricas[k] = cohen_kappa_score(y, ye) 
+            
+        elif name_metric.lower() == 'cohen_kappa_linear':                
+            metricas[k] = cohen_kappa_score(y, ye, weights='linear') 
+            
+        elif name_metric.lower() == 'cohen_kappa_quadratic':                
+            metricas[k] = cohen_kappa_score(y, ye, weights='quadratic')
+            
+        elif name_metric.lower() == 'matthews':                
+            metricas[k] = matthews_corrcoef(y, ye) 
+            
+    return metricas
+
+def generate_batches(nBatch, param, mode='random', seed=42):
+    if seed is not None:
+        np.random.seed(seed)
+
+    if mode == 'random':
+        # param: number of samples in the training set
+        if nBatch == param:
+            list_samples_batch = []
+            list_samples_batch.append(list(range(param)))
+            num_batches = 1
+
+        else:
+
+            indices = list(range(param))
+            random.shuffle(indices)
+
+            l = len(indices)
+            #for ndx in range(0, l, nBatch):
+            #    yield indices[ndx:min(ndx + nBatch, l)]
+
+            num_batches = int(np.ceil(param/nBatch))
+            list_samples_batch = []
+            for ndx in range(0, l, nBatch):
+                list_aux = indices[ndx:min(ndx + nBatch, l)]
+                list_aux.sort()
+                list_samples_batch.append(list_aux)
+
+
+    elif mode == 'class_equitative':
+        # All classes have the same number of samples in each batch (repetition for minority)
+        #param: class labels for the train set
+        if nBatch == param.shape[0]:
+            list_samples_batch = []
+            list_samples_batch.append(list(range(param.shape[0])))
+            num_batches = 1
+
+        else:
+            class_labels, samples_class = np.unique(param, return_counts=True)
+            samples_max = np.max(samples_class)
+            samples_min = np.min(samples_class)
+            num_classes = class_labels.shape[0]
+
+            batch_samples_class = np.ceil(nBatch/num_classes).astype(int)
+            num_batches = np.ceil(samples_max/batch_samples_class).astype(int)
+
+            list_samples_class = []
+            for k in range(num_classes):
+                mod = int((batch_samples_class*num_batches) // samples_class[k])
+                rem = int((batch_samples_class*num_batches) % samples_class[k])
+                ind_class = np.nonzero(param==class_labels[k])[0]
+                list_aux = list(ind_class)*mod + list(np.random.choice(ind_class, rem))
+                random.shuffle(list_aux)
+                list_samples_class.append(list_aux)
+
+            list_samples_batch = []
+            for kbatch in range(num_batches):
+                list_aux = []
+                for kclass in range(num_classes):
+                    list_aux += list_samples_class[kclass][batch_samples_class*kbatch:batch_samples_class*(kbatch+1)]
+
+                list_aux.sort()
+                list_samples_batch.append(list_aux)
+
+    elif mode == 'representative':
+        # All classes have at least 1 sample in each batch (repetition for minority)
+        #param: class labels for the train set
+        if nBatch == param.shape[0]:
+            list_samples_batch = []
+            list_samples_batch.append(list(range(param.shape[0])))
+            num_batches = 1
+
+        else:
+            class_labels, samples_class = np.unique(param, return_counts=True)
+            samples_max = np.max(samples_class)
+            samples_min = np.min(samples_class)
+            num_classes = class_labels.shape[0]
+            num_samples = param.shape[0]
+
+            #batch_samples_class = np.ceil(nBatch/num_classes).astype(int)
+            num_batches = np.ceil(num_samples/nBatch).astype(int)
+            batch_samples_class = []
+            list_samples_class = []
+            for k in range(num_classes):
+                batch_samples_class.append(np.ceil(nBatch*samples_class[k]/num_samples).astype(int))
+
+                mod = int((batch_samples_class[k]*num_batches) // samples_class[k])
+                rem = int((batch_samples_class[k]*num_batches) % samples_class[k])
+                ind_class = np.nonzero(param==class_labels[k])[0]
+                list_aux = list(ind_class)*mod + list(np.random.choice(ind_class, rem))
+                random.shuffle(list_aux)
+                list_samples_class.append(list_aux)
+
+            list_samples_batch = []
+            for kbatch in range(num_batches):
+                list_aux = []
+                for kclass in range(num_classes):
+                    list_aux += list_samples_class[kclass][batch_samples_class[kclass]*kbatch:batch_samples_class[kclass]*(kbatch+1)]
+
+                list_aux.sort()
+                list_samples_batch.append(list_aux)
+
+
+    for kbatch in range(num_batches):
+        yield list_samples_batch[kbatch]
+
