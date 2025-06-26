@@ -6,7 +6,7 @@ This repository implements a multiclass classification framework using Binary De
 
 Binarization decompose multiclass problems into multiple binary classification problems. Even if the original multiclass data is balanced, binarization—such as the One-versus-Rest (OvR) strategy—can introduce severe class imbalance. This imbalance complicates learning, particularly in Bayes-optimal classification, where accurate likelihood ratio estimation is crucial.
 
-The Asymetric Label Switching Ensemble (ALSE) offers an alternative approach to handle imbalanced classification. It randomly swaps labels based on predefined switching rates, introducing diversity within the ensemble, which enhances performance. Additionally, label switching rebalances class distributions, improving the estimation of transformed a priori probabilities and, consequently, the likelihood ratio for base learners.
+The Asymetric Label Switching Ensemble (ALSE) offers an alternative approach to handle imbalanced classification. It randomly swaps labels based on predefined switching rates, introducing diversity within the ensemble, which enhances performance. Additionally, label switching rebalances class distributions, improving the estimation of transformed a posteriori probabilities and, consequently, the likelihood ratio for base learners.
 
 Asymmetric label switching can be combined with other neutral rebalancing strategies, such as cost-sensitive learning and population-based adjustments. This results in a transformed problem where the optimal Bayes threshold can be theoretically derived.
 
