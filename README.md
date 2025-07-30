@@ -10,9 +10,6 @@ The Asymetric Label Switching Ensemble (ALSE) offers an alternative approach to 
 
 Asymmetric label switching can be combined with other neutral rebalancing strategies, such as cost-sensitive learning and population-based adjustments. This results in a transformed problem where the optimal Bayes threshold can be theoretically derived.
 
-For further details on likelihood ratio estimation and Bayes threshold transformations, see:
-"Optimum Bayesian thresholds for rebalanced classification problems using class-switching ensembles," Pattern Recognition, 2022. [https://doi.org/10.1016/j.patcog.2022.109158](https://doi.org/10.1016/j.patcog.2022.109158)
-
 ## Key Features
 
 * **Hyperparameter Optimization Script (`optimize_hyperparameters.py`):**
